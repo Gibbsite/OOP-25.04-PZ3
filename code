@@ -7,10 +7,36 @@ class MyString
 public:
 	char* string;
 
+	MyString()
+	{
+		string = new char[2];
+		string[1] = '\0';
+	}
+
 	MyString(int size)
 	{
 		string = new char[size + 1];
 		string[size] = '\0';
+	}
+
+	MyString(const char* string)
+	{
+		this->string = new char[strlen(string) + 1];
+		*this->string = *string;
+		this->string[strlen(string)] = 0;
+	}
+
+	MyString(MyString& other)
+	{
+		this->string = new char[strlen(other.string)];
+		*this->string = *other.string;
+		this->string[strlen(string)] = 0;
+	}
+
+	MyString(MyString&& other) noexcept
+	{
+		this->string = other.string;
+		other.string = nullptr;
 	}
 
 	~MyString()
@@ -41,12 +67,33 @@ public:
 	MyString* name;
 	int id;
 
-	Vertex(const char* name)
+	Vertex()
 	{
-		this->name = new MyString(1);
-		*this->name->string = *name;
+		this->name = new MyString();
 		id = ID;
 		ID++;
+	}
+
+	Vertex(const char* name)
+	{
+		this->name = new MyString(name);
+		id = ID;
+		ID++;
+	}
+
+	Vertex(Vertex& other)
+	{
+		this->name = new MyString(*other.name);
+		id = ID;
+		ID++;
+	}
+
+	Vertex(Vertex&& other) noexcept
+	{
+		this->name = other.name;
+		id = other.id;
+
+		other.name = nullptr;
 	}
 
 	~Vertex()
@@ -54,11 +101,13 @@ public:
 		delete name;
 	}
 
-	MyString* GetInfo()
-	{
-		return name;
-	}
+	MyString* GetInfo();
 };
+
+MyString* Vertex::GetInfo()
+{
+	return name;
+}
 
 class Edge : GraphElement
 {
@@ -66,13 +115,43 @@ public:
 	Vertex* start;
 	Vertex* end;
 
+	Edge()
+	{
+		start = nullptr;
+		end = nullptr;
+	}
+
 	Edge(Vertex* start, Vertex* end)
 	{
 		this->start = start;
 		this->end = end;
 	}
 
-	MyString* GetInfo()
+	Edge(Edge& other)
+	{
+		start = new Vertex(*other.start);
+		end = new Vertex(*other.end);
+	}
+
+	Edge(Edge&& other) 
+	{
+		start = other.start;
+		end = other.end;
+
+		other.start = nullptr;
+		other.end = nullptr;
+	}
+
+	~Edge()
+	{
+		delete start->name;
+		delete end->name;
+	}
+
+	MyString* GetInfo();
+};
+
+	MyString* Edge::GetInfo()
 	{
 		MyString* info = new MyString(3);
 		info->string[0] = *start->GetInfo()->string;
@@ -81,7 +160,6 @@ public:
 
 		return info;
 	}
-};
 
 struct Node
 {
@@ -119,7 +197,6 @@ public:
 	}
 
 	void AddNode(Edge* edge);
-
 	int** GetAdjacencyMatrix();
 	void PrintMatrix(int** matrix);
 };
