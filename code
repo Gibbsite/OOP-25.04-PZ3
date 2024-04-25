@@ -262,8 +262,556 @@ int main()
 	Vertex* D = new Vertex("D");
 	Vertex* NotIncluded = new Vertex("Not Included");
 	Edge* AxB = new Edge(A, B);
-	std::cout << A->GetInfo()->string << '\n';
-	std::cout << AxB->GetInfo()->string << '\n';
+	std::cout << *A->GetInfo() << '\n';
+	std::cout << *AxB->GetInfo() << '\n';
+
+	Container* container = new Container();
+	container->AddNode(AxB);
+	container->AddNode(new Edge(C, D));
+	container->AddNode(new Edge(A, C));
+	container->AddNode(new Edge(A, A));
+
+	container->PrintMatrix(container->GetAdjacencyMatrix());
+}#include <iostream>
+
+static int ID = 0;
+
+class MyString
+{
+public:
+	char* string;
+
+	MyString()
+	{
+		string = new char[2];
+		string[1] = '\0';
+	}
+
+	MyString(int size)
+	{
+		string = new char[size + 1];
+		string[size] = '\0';
+	}
+
+	MyString(const char* string)
+	{
+		this->string = new char[strlen(string) + 1];
+		*this->string = *string;
+		this->string[strlen(string)] = 0;
+	}
+
+	MyString(MyString& other)
+	{
+		this->string = new char[strlen(other.string)];
+		*this->string = *other.string;
+		this->string[strlen(string)] = 0;
+	}
+
+	MyString(MyString&& other) noexcept
+	{
+		this->string = other.string;
+		other.string = nullptr;
+	}
+
+	~MyString()
+	{
+		delete[] string;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const MyString& string);
+};
+
+std::ostream& operator<<(std::ostream& os, const MyString& string)
+{
+	os << string.string;
+	return os;
+}
+
+
+class GraphElement abstract
+{
+protected:
+	virtual MyString* GetInfo() = 0;
+	virtual ~GraphElement() = default;
+};
+
+class Vertex : GraphElement
+{
+public:
+	MyString* name;
+	int id;
+
+	Vertex()
+	{
+		this->name = new MyString();
+		id = ID;
+		ID++;
+	}
+
+	Vertex(const char* name)
+	{
+		this->name = new MyString(name);
+		id = ID;
+		ID++;
+	}
+
+	Vertex(Vertex& other)
+	{
+		this->name = new MyString(*other.name);
+		id = ID;
+		ID++;
+	}
+
+	Vertex(Vertex&& other) noexcept
+	{
+		this->name = other.name;
+		id = other.id;
+
+		other.name = nullptr;
+	}
+
+	~Vertex()
+	{
+		delete name;
+	}
+
+	MyString* GetInfo();
+};
+
+MyString* Vertex::GetInfo()
+{
+	return name;
+}
+
+class Edge : GraphElement
+{
+public:
+	Vertex* start;
+	Vertex* end;
+
+	Edge()
+	{
+		start = nullptr;
+		end = nullptr;
+	}
+
+	Edge(Vertex* start, Vertex* end)
+	{
+		this->start = start;
+		this->end = end;
+	}
+
+	Edge(Edge& other)
+	{
+		start = new Vertex(*other.start);
+		end = new Vertex(*other.end);
+	}
+
+	Edge(Edge&& other) 
+	{
+		start = other.start;
+		end = other.end;
+
+		other.start = nullptr;
+		other.end = nullptr;
+	}
+
+	~Edge()
+	{
+		delete start->name;
+		delete end->name;
+	}
+
+	MyString* GetInfo();
+};
+
+	MyString* Edge::GetInfo()
+	{
+		MyString* info = new MyString(3);
+		info->string[0] = *start->GetInfo()->string;
+		info->string[1] = ' ';
+		info->string[2] = *end->GetInfo()->string;
+
+		return info;
+	}
+
+struct Node
+{
+	Edge* element;
+	Node* next;
+};
+
+class Container
+{
+private:
+	Node* head;
+	Node* tail;
+	int size;
+public:
+	Container()
+	{
+		head = nullptr;
+		tail = nullptr;
+		size = 0;
+	}
+
+	~Container()
+	{
+		Node* current = head;
+
+		while (current != nullptr)
+		{
+			Node* temp = current;
+			current = current->next;
+			delete temp;
+		}
+
+		head = nullptr;
+		tail = nullptr;
+	}
+
+	void AddNode(Edge* edge);
+	int** GetAdjacencyMatrix();
+	void PrintMatrix(int** matrix);
+};
+
+void Container::AddNode(Edge* edge)
+{
+
+	Node* node = new Node();
+	size++;
+	node->element = edge;
+
+	if (head == nullptr)
+	{
+		head = node;
+		tail = head;
+		return;
+	}
+	tail->next = node;
+	tail = node;
+}
+
+int** Container::GetAdjacencyMatrix()
+{
+	int** matrix = new int*[ID];
+	for (int i = 0; i < ID; i++)
+		matrix[i] = new int[ID];
+
+	for (int i = 0; i < ID; i++)
+	{
+		for (int j = 0; j < ID; j++)
+		{
+			matrix[i][j] = 0;
+		}
+	}
+
+	Node* current = head;
+	while (current != nullptr)
+	{
+		matrix[current->element->start->id][current->element->end->id] = 1;
+		matrix[current->element->end->id][current->element->start->id] = 1;
+		current = current->next;
+	}
+	return matrix;
+}
+
+void Container::PrintMatrix(int** matrix)
+{
+	for (int i = 0; i < ID; ++i)
+	{
+		for (int j = 0; j < ID; ++j)
+		{
+			std::cout << matrix[i][j] << " ";
+		}
+		std::cout << '\n';
+	}
+}
+
+int main()
+{
+	Vertex* A = new Vertex("A");
+	Vertex* B = new Vertex("B");
+	Vertex* C = new Vertex("C");
+	Vertex* D = new Vertex("D");
+	Vertex* NotIncluded = new Vertex("Not Included");
+	Edge* AxB = new Edge(A, B);
+	std::cout << *A->GetInfo() << '\n';
+	std::cout << *AxB->GetInfo() << '\n';
+
+	Container* container = new Container();
+	container->AddNode(AxB);
+	container->AddNode(new Edge(C, D));
+	container->AddNode(new Edge(A, C));
+	container->AddNode(new Edge(A, A));
+
+	container->PrintMatrix(container->GetAdjacencyMatrix());
+}#include <iostream>
+
+static int ID = 0;
+
+class MyString
+{
+public:
+	char* string;
+
+	MyString()
+	{
+		string = new char[2];
+		string[1] = '\0';
+	}
+
+	MyString(int size)
+	{
+		string = new char[size + 1];
+		string[size] = '\0';
+	}
+
+	MyString(const char* string)
+	{
+		this->string = new char[strlen(string) + 1];
+		*this->string = *string;
+		this->string[strlen(string)] = 0;
+	}
+
+	MyString(MyString& other)
+	{
+		this->string = new char[strlen(other.string)];
+		*this->string = *other.string;
+		this->string[strlen(string)] = 0;
+	}
+
+	MyString(MyString&& other) noexcept
+	{
+		this->string = other.string;
+		other.string = nullptr;
+	}
+
+	~MyString()
+	{
+		delete[] string;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const MyString& string);
+};
+
+std::ostream& operator<<(std::ostream& os, const MyString& string)
+{
+	os << string.string;
+	return os;
+}
+
+
+class GraphElement abstract
+{
+protected:
+	virtual MyString* GetInfo() = 0;
+	virtual ~GraphElement() = default;
+};
+
+class Vertex : GraphElement
+{
+public:
+	MyString* name;
+	int id;
+
+	Vertex()
+	{
+		this->name = new MyString();
+		id = ID;
+		ID++;
+	}
+
+	Vertex(const char* name)
+	{
+		this->name = new MyString(name);
+		id = ID;
+		ID++;
+	}
+
+	Vertex(Vertex& other)
+	{
+		this->name = new MyString(*other.name);
+		id = ID;
+		ID++;
+	}
+
+	Vertex(Vertex&& other) noexcept
+	{
+		this->name = other.name;
+		id = other.id;
+
+		other.name = nullptr;
+	}
+
+	~Vertex()
+	{
+		delete name;
+	}
+
+	MyString* GetInfo();
+};
+
+MyString* Vertex::GetInfo()
+{
+	return name;
+}
+
+class Edge : GraphElement
+{
+public:
+	Vertex* start;
+	Vertex* end;
+
+	Edge()
+	{
+		start = nullptr;
+		end = nullptr;
+	}
+
+	Edge(Vertex* start, Vertex* end)
+	{
+		this->start = start;
+		this->end = end;
+	}
+
+	Edge(Edge& other)
+	{
+		start = new Vertex(*other.start);
+		end = new Vertex(*other.end);
+	}
+
+	Edge(Edge&& other) 
+	{
+		start = other.start;
+		end = other.end;
+
+		other.start = nullptr;
+		other.end = nullptr;
+	}
+
+	~Edge()
+	{
+		delete start->name;
+		delete end->name;
+	}
+
+	MyString* GetInfo();
+};
+
+	MyString* Edge::GetInfo()
+	{
+		MyString* info = new MyString(3);
+		info->string[0] = *start->GetInfo()->string;
+		info->string[1] = ' ';
+		info->string[2] = *end->GetInfo()->string;
+
+		return info;
+	}
+
+struct Node
+{
+	Edge* element;
+	Node* next;
+};
+
+class Container
+{
+private:
+	Node* head;
+	Node* tail;
+	int size;
+public:
+	Container()
+	{
+		head = nullptr;
+		tail = nullptr;
+		size = 0;
+	}
+
+	~Container()
+	{
+		Node* current = head;
+
+		while (current != nullptr)
+		{
+			Node* temp = current;
+			current = current->next;
+			delete temp;
+		}
+
+		head = nullptr;
+		tail = nullptr;
+	}
+
+	void AddNode(Edge* edge);
+	int** GetAdjacencyMatrix();
+	void PrintMatrix(int** matrix);
+};
+
+void Container::AddNode(Edge* edge)
+{
+
+	Node* node = new Node();
+	size++;
+	node->element = edge;
+
+	if (head == nullptr)
+	{
+		head = node;
+		tail = head;
+		return;
+	}
+	tail->next = node;
+	tail = node;
+}
+
+int** Container::GetAdjacencyMatrix()
+{
+	int** matrix = new int*[ID];
+	for (int i = 0; i < ID; i++)
+		matrix[i] = new int[ID];
+
+	for (int i = 0; i < ID; i++)
+	{
+		for (int j = 0; j < ID; j++)
+		{
+			matrix[i][j] = 0;
+		}
+	}
+
+	Node* current = head;
+	while (current != nullptr)
+	{
+		matrix[current->element->start->id][current->element->end->id] = 1;
+		matrix[current->element->end->id][current->element->start->id] = 1;
+		current = current->next;
+	}
+	return matrix;
+}
+
+void Container::PrintMatrix(int** matrix)
+{
+	for (int i = 0; i < ID; ++i)
+	{
+		for (int j = 0; j < ID; ++j)
+		{
+			std::cout << matrix[i][j] << " ";
+		}
+		std::cout << '\n';
+	}
+}
+
+int main()
+{
+	Vertex* A = new Vertex("A");
+	Vertex* B = new Vertex("B");
+	Vertex* C = new Vertex("C");
+	Vertex* D = new Vertex("D");
+	Vertex* NotIncluded = new Vertex("Not Included");
+	Edge* AxB = new Edge(A, B);
+	std::cout << *A->GetInfo() << '\n';
+	std::cout << *AxB->GetInfo() << '\n';
 
 	Container* container = new Container();
 	container->AddNode(AxB);
